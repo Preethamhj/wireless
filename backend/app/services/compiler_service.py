@@ -1,117 +1,74 @@
 import subprocess
 import uuid
-import os
 from pathlib import Path
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+from app.services.firmware_store import FIRMWARE_BUILDS
 
-# ----------------------------
-# Configuration
-# ----------------------------
-ARDUINO = os.getenv("ARDUINO_CLI_PATH")
+ARDUINO = "arduino-cli"
+BUILD_DIR = Path("build/temp")
+BIN_DIR = Path("firmware_bins")
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
-TEMPLATE_DIR = BASE_DIR / "firmware_templates"
-BUILD_DIR = BASE_DIR / "build" / "temp"
-BIN_DIR = BASE_DIR / "firmware_bins"
-
-# Ensure directories exist
-BUILD_DIR.mkdir(parents=True, exist_ok=True)
-BIN_DIR.mkdir(parents=True, exist_ok=True)
+LIBRARIES_PATH = "E:/ardinoide/libraries"  # ArduinoJson path
 
 
-def compile_code(user_code: str):
-    """
-    Compiles user Arduino code using Arduino CLI and ESP32 core.
-    Returns build_id, logs, and success status.
-    """
-
-    # ----------------------------
-    # Sanity checks
-    # ----------------------------
-    if not ARDUINO:
-        return {
-            "success": False,
-            "logs": "ARDUINO_CLI_PATH not set in environment variables"
-        }
-
-    if not os.path.exists(ARDUINO):
-        return {
-            "success": False,
-            "logs": f"Arduino CLI not found at: {ARDUINO}"
-        }
-
-    # ----------------------------
-    # Create build workspace
-    # ----------------------------
+def compile_code(source_code: str):
     build_id = str(uuid.uuid4())
+
+    BUILD_DIR.mkdir(parents=True, exist_ok=True)
+    BIN_DIR.mkdir(parents=True, exist_ok=True)
+
     sketch_dir = BUILD_DIR / build_id
     sketch_dir.mkdir(parents=True, exist_ok=True)
 
-    # ----------------------------
-    # Load firmware template
-    # ----------------------------
-    template_path = TEMPLATE_DIR / "base_template.ino"
+    ino_path = sketch_dir / f"{build_id}.ino"
+    ino_path.write_text(source_code, encoding="utf-8")
 
-    if not template_path.exists():
-        return {
-            "success": False,
-            "logs": "Firmware template not found"
-        }
-
-    template = template_path.read_text()
-
-    # Inject user code
-    sketch_code = template.replace("{{ USER_CODE }}", user_code)
-
-    # Arduino requires filename == folder name
-    sketch_file = sketch_dir / f"{build_id}.ino"
-    sketch_file.write_text(sketch_code)
-
-    # ----------------------------
-    # Arduino CLI compile command
-    # ----------------------------
     cmd = [
         ARDUINO,
         "compile",
-        "--fqbn",
-        "esp32:esp32:esp32dev",
-        "--output-dir",
-        str(BIN_DIR),
+        "--fqbn", "esp32:esp32:esp32",
+        "--libraries", LIBRARIES_PATH,
+        "--output-dir", str(BIN_DIR),
         str(sketch_dir)
     ]
 
-    # ----------------------------
-    # Run compiler
-    # ----------------------------
     try:
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=1800
         )
     except subprocess.TimeoutExpired:
+        return {"success": False, "logs": "Compilation timed out"}
+
+    if result.returncode != 0:
+        return {"success": False, "logs": result.stderr}
+
+    # ==================================================
+    # 🔑 CORRECT OTA FIRMWARE SELECTION
+    # ==================================================
+
+    app_bins = [
+        f for f in BIN_DIR.glob("*.ino.bin")
+        if not any(x in f.name for x in ["bootloader", "partitions", "merged"])
+    ]
+
+    if not app_bins:
         return {
             "success": False,
-            "logs": "Compilation timed out"
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "logs": str(e)
+            "logs": "Application firmware (.ino.bin) not found for OTA"
         }
 
-    # ----------------------------
-    # Handle result
-    # ----------------------------
-    if result.returncode != 0:
-        return {
-            "success": False,
-            "logs": result.stderr
-        }
+    firmware_bin = max(app_bins, key=lambda f: f.stat().st_size)
+
+    # Register firmware for OTA
+    FIRMWARE_BUILDS[build_id] = firmware_bin
+
+    print("[COMPILE] Firmware registered")
+    print("  build_id :", build_id)
+    print("  bin path :", firmware_bin)
+    print("  size     :", firmware_bin.stat().st_size, "bytes")
 
     return {
         "success": True,

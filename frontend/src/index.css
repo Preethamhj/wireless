@@ -1,4 +1,15 @@
+
 @import "tailwindcss";
 body {
-  @apply bg-gray-900 text-gray-100;
+  @apply bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 text-gray-100 min-h-screen;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  background: #222;
+}
+::-webkit-scrollbar-thumb {
+  background: #2e2e2e;
+  border-radius: 4px;
 }
