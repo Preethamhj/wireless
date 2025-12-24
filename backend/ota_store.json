@@ -1,0 +1,123 @@
+{
+  "firmware": {
+    "3e331ba2-fc00-476d-8935-090f21565820": "firmware_bins\\3e331ba2-fc00-476d-8935-090f21565820.ino.bin",
+    "84b9ab44-3afc-419d-9b29-ff90f347739d": "firmware_bins\\3e331ba2-fc00-476d-8935-090f21565820.ino.bin",
+    "6076d554-b12d-43e9-8cd4-5f1c806eeb34": "firmware_bins\\3e331ba2-fc00-476d-8935-090f21565820.ino.bin",
+    "42f2e2ca-fbc1-4480-9242-a758e5d852e0": "firmware_bins\\3e331ba2-fc00-476d-8935-090f21565820.ino.bin",
+    "8cc6cfad-fe6b-4a3e-b0a2-f80a57964555": "firmware_bins\\8cc6cfad-fe6b-4a3e-b0a2-f80a57964555.ino.bin"
+  },
+  "assignments": {
+    "esp32_01": {
+      "build_id": "8cc6cfad-fe6b-4a3e-b0a2-f80a57964555",
+      "status": "pending",
+      "assigned_at": "2025-12-24T02:04:11.354139"
+    }
+  },
+  "events": [
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:40:25.766738"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:40:35.146645"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:40:46.108630"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:40:55.893964"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:41:21.151449"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:41:30.794820"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:41:39.650544"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:41:49.652486"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:42:00.212728"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:42:10.209126"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:42:21.132092"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:42:30.168662"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "ebbfbfc6-079a-442d-8813-2aeeae0addbd",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-23T18:42:40.185554"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "42f2e2ca-fbc1-4480-9242-a758e5d852e0",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-24T02:00:28.323900"
+    },
+    {
+      "device_id": "esp32_01",
+      "build_id": "42f2e2ca-fbc1-4480-9242-a758e5d852e0",
+      "status": "started",
+      "reason": "pull_failed",
+      "timestamp": "2025-12-24T02:03:53.357969"
+    }
+  ]
+}

@@ -1,28 +1,35 @@
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pathlib import Path
+from datetime import datetime
 
-from app.services.firmware_store import OTA_ASSIGNMENTS, FIRMWARE_BUILDS
+from app.models.schemas import OTAAssignRequest
+from app.services.firmware_store import (
+    OTA_ASSIGNMENTS,
+    FIRMWARE_BUILDS,
+    OTA_EVENTS,
+    save_store,
+    _STORE
+)
 
 router = APIRouter()
-from datetime import datetime
-from app.services.firmware_store import OTA_EVENTS
+
+# =====================================================
+# FALLBACK EVENT (ESP32 → Backend)
+# =====================================================
 
 @router.post("/fallback-event")
 def ota_fallback_event(payload: dict):
-    """
-    ESP32 notifies backend that fallback OTA was triggered
-    """
-
     event = {
         "device_id": payload.get("device_id"),
         "build_id": payload.get("build_id"),
+        "status": payload.get("status"),      # started / success / failed
         "reason": payload.get("reason"),
-        "status": payload.get("status"),  # started / success / failed
         "timestamp": datetime.utcnow().isoformat()
     }
 
     OTA_EVENTS.append(event)
+    save_store(_STORE)
 
     print(
         f"[OTA-FALLBACK] device={event['device_id']} "
@@ -33,32 +40,57 @@ def ota_fallback_event(payload: dict):
 
     return {"status": "logged"}
 
-
 # =====================================================
-# EXISTING ENDPOINTS (UNCHANGED)
+# ASSIGN OTA (ADMIN / UI)
 # =====================================================
 
 @router.post("/assign")
-def assign_ota(req):
-    OTA_ASSIGNMENTS[req.device_id] = req.build_id
-    return {"status": "assigned"}
+def assign_ota(req: OTAAssignRequest):
+    OTA_ASSIGNMENTS[req.device_id] = {
+        "build_id": req.build_id,
+        "status": "pending",
+        "assigned_at": datetime.utcnow().isoformat()
+    }
 
-@router.get("/check")
-def check_ota(device_id: str):
-    if device_id not in OTA_ASSIGNMENTS:
-        return {"update": False}
+    save_store(_STORE)
 
     return {
-        "update": True,
-        "build_id": OTA_ASSIGNMENTS[device_id]
+        "status": "assigned",
+        "device_id": req.device_id,
+        "build_id": req.build_id
     }
+
+# =====================================================
+# OTA CHECK (ESP32 POLLING ENDPOINT)
+# =====================================================
+
+@router.get("/check")
+def ota_check(device_id: str):
+    entry = OTA_ASSIGNMENTS.get(device_id)
+
+    # 🛡️ HARD SAFETY GUARD
+    if not entry or not isinstance(entry, dict):
+        return {"update": False}
+
+    if entry.get("status") != "pending":
+        return {"update": False}
+
+    # 🔑 ONLY RETURN STRING BUILD_ID
+    return {
+        "update": True,
+        "build_id": entry["build_id"]
+    }
+
+# =====================================================
+# OTA DOWNLOAD (PULL MODE)
+# =====================================================
 
 @router.get("/download/{build_id}")
 def download_firmware(build_id: str):
     if build_id not in FIRMWARE_BUILDS:
         raise HTTPException(status_code=404, detail="Firmware not found")
 
-    firmware_path = FIRMWARE_BUILDS[build_id]
+    firmware_path: Path = FIRMWARE_BUILDS[build_id]
 
     if not firmware_path.exists():
         raise HTTPException(status_code=404, detail="Firmware file missing")
@@ -70,48 +102,39 @@ def download_firmware(build_id: str):
     )
 
 # =====================================================
-# 🆕 PUSH OTA ENDPOINT (FALLBACK MODE)
+# OTA PUSH (FALLBACK MODE)
 # =====================================================
 
 @router.post("/push/{device_id}")
 def push_firmware(device_id: str):
-    """
-    ESP32 calls this endpoint when normal OTA download fails.
-    Backend responds by STREAMING the firmware binary.
-    """
+    entry = OTA_ASSIGNMENTS.get(device_id)
 
-    # 1️⃣ Check if device has OTA assigned
-    if device_id not in OTA_ASSIGNMENTS:
-        raise HTTPException(
-            status_code=404,
-            detail="No OTA assigned for this device"
-        )
+    if not entry or not isinstance(entry, dict):
+        raise HTTPException(status_code=404, detail="No OTA assigned")
 
-    build_id = OTA_ASSIGNMENTS[device_id]
+    build_id = entry["build_id"]
 
-    # 2️⃣ Validate build_id
     if build_id not in FIRMWARE_BUILDS:
-        raise HTTPException(
-            status_code=404,
-            detail="Firmware build not found"
-        )
+        raise HTTPException(status_code=404, detail="Firmware build not found")
 
     firmware_path: Path = FIRMWARE_BUILDS[build_id]
 
-    # 3️⃣ Ensure file exists
     if not firmware_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Firmware file missing on disk"
-        )
+        raise HTTPException(status_code=404, detail="Firmware file missing")
 
-    # 4️⃣ Generator to stream binary in chunks
     def firmware_stream():
         with open(firmware_path, "rb") as f:
-            while chunk := f.read(4096):
+            while True:
+                chunk = f.read(4096)
+                if not chunk:
+                    break
                 yield chunk
 
-    # 5️⃣ Stream firmware as raw binary
+        # ✅ MARK OTA AS COMPLETED AFTER STREAM FINISH
+        OTA_ASSIGNMENTS[device_id]["status"] = "completed"
+        OTA_ASSIGNMENTS[device_id]["completed_at"] = datetime.utcnow().isoformat()
+        save_store(_STORE)
+
     return StreamingResponse(
         firmware_stream(),
         media_type="application/octet-stream",
@@ -120,6 +143,11 @@ def push_firmware(device_id: str):
             "X-Firmware-Build": build_id
         }
     )
+
+# =====================================================
+# OTA EVENTS (DEBUG / DASHBOARD)
+# =====================================================
+
 @router.get("/events")
 def get_ota_events():
-    return OTA_EVENTS[-50:]  # last 50 events
+    return OTA_EVENTS[-50:]
